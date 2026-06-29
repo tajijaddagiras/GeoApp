@@ -16,19 +16,15 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase safely (prevents 'already-initialized' error during Fast Refresh)
-let app;
-let auth;
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
-  // Initialize Auth with AsyncStorage persistence
-  auth = initializeAuth(app, {
-    persistence: getReactNativePersistence(AsyncStorage)
-  });
-} else {
-  app = getApp();
-  auth = getAuth(app);
-}
+// Initialize Auth with AsyncStorage persistence (only once)
+// @ts-ignore
+export const auth = getApps().length === 1
+  ? initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    })
+  : getAuth(app);
 
 // Initialize Firestore
 export const db = getFirestore(app);

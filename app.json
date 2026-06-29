@@ -1,17 +1,14 @@
 {
   "expo": {
     "name": "Geo-Contextual App",
-    "slug": "geo-contextual-app",
+    "slug": "geo-app",
+    "owner": "girasss",
     "version": "1.0.0",
+    "runtimeVersion": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#6AA88F"
-    },
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.man1pekanbaru.geocontextual"
@@ -20,10 +17,8 @@
       "package": "com.man1pekanbaru.geocontextual",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#6AA88F"
+        "backgroundColor": "#2F4F74"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
@@ -36,12 +31,25 @@
     },
     "plugins": [
       [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#2F4F74"
+        }
+      ],
+      [
         "expo-image-picker",
         {
           "photosPermission": "Aplikasi memerlukan akses ke galeri untuk memilih foto.",
           "cameraPermission": "Aplikasi memerlukan akses ke kamera untuk mengambil foto."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "da263c91-d477-4cde-8337-0af82de40310"
+      }
+    }
   }
 }
