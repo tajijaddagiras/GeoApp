@@ -29,13 +29,26 @@ export interface Materi {
   updatedAt: Date;
 }
 
+export interface Level {
+  id: string;
+  nama: string;       // e.g., "Level 1", "Level Mudah"
+  poinPerSoal: number;
+  durasiMenit: number;
+  createdAt: Date;
+}
+
 export interface Soal {
   id: string;
   materiId: string;
+  levelId?: string;
   pertanyaan: string;
-  pilihan: string[]; // Array of 4 choices
-  kunciJawaban: number; // Index of correct answer (0-3)
-  pembahasan?: string;
+  jawabanA: string;
+  jawabanB: string;
+  jawabanC: string;
+  jawabanD: string;
+  jawabanBenar: string;
+  imageUrl?: string;
+  order: number;
   createdAt: Date;
 }
 
@@ -68,6 +81,7 @@ export interface Progress {
   userId: string;
   materiId: string;
   status: 'locked' | 'available' | 'in_progress' | 'completed';
+  skor?: number;
   lastAccessed?: Date;
   completedAt?: Date;
 }

@@ -4,48 +4,48 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndi
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Card } from '../../components/Card';
-import { Materi } from '../../types';
-import { getAllMateri, deleteMateri } from '../../services/firebaseService';
+import { Level } from '../../types';
+import { getAllLevels, deleteLevel } from '../../services/firebaseService';
 
-interface KelolaMateriScreenProps {
+interface KelolaLevelScreenProps {
   navigation: any;
 }
 
-export const KelolaMateriScreen: React.FC<KelolaMateriScreenProps> = ({ navigation }) => {
-  const [materiList, setMateriList] = useState<Materi[]>([]);
+export const KelolaLevelScreen: React.FC<KelolaLevelScreenProps> = ({ navigation }) => {
+  const [levelList, setLevelList] = useState<Level[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      loadMateri();
+      loadLevels();
     }, [])
   );
 
-  const loadMateri = async () => {
+  const loadLevels = async () => {
     try {
       setLoading(true);
-      const data = await getAllMateri();
-      setMateriList(data);
+      const data = await getAllLevels();
+      setLevelList(data);
     } catch (error) {
-      console.error('Load materi error:', error);
-      Alert.alert('Error', 'Gagal memuat data materi');
+      console.error('Load levels error:', error);
+      Alert.alert('Error', 'Gagal memuat data level');
     } finally {
       setLoading(false);
     }
   };
 
   const handleAdd = () => {
-    navigation.navigate('FormMateri', {});
+    navigation.navigate('FormLevel', {});
   };
 
-  const handleEdit = (materi: Materi) => {
-    navigation.navigate('FormMateri', { materi });
+  const handleEdit = (level: Level) => {
+    navigation.navigate('FormLevel', { level });
   };
 
-  const handleDelete = (materi: Materi) => {
+  const handleDelete = (level: Level) => {
     Alert.alert(
-      'Hapus Materi',
-      `Apakah Anda yakin ingin menghapus "${materi.title}"?`,
+      'Hapus Level',
+      `Apakah Anda yakin ingin menghapus "${level.nama}"?\n\nPerhatian: Soal yang menggunakan level ini tidak akan terhapus, namun tidak lagi memiliki level.`,
       [
         { text: 'Batal', style: 'cancel' },
         {
@@ -53,11 +53,11 @@ export const KelolaMateriScreen: React.FC<KelolaMateriScreenProps> = ({ navigati
           style: 'destructive',
           onPress: async () => {
             try {
-              await deleteMateri(materi.id);
-              await loadMateri();
-              Alert.alert('Berhasil', 'Materi berhasil dihapus');
+              await deleteLevel(level.id);
+              await loadLevels();
+              Alert.alert('Berhasil', 'Level berhasil dihapus');
             } catch (error) {
-              Alert.alert('Error', 'Gagal menghapus materi');
+              Alert.alert('Error', 'Gagal menghapus level');
             }
           },
         },
@@ -65,22 +65,26 @@ export const KelolaMateriScreen: React.FC<KelolaMateriScreenProps> = ({ navigati
     );
   };
 
-  const renderMateriItem = ({ item }: { item: Materi }) => (
-    <Card style={styles.materiCard}>
-      <View style={styles.materiHeader}>
-        <View style={styles.orderBadge}>
-          <Text style={styles.orderText}>{item.order}</Text>
+  const renderLevelItem = ({ item }: { item: Level }) => (
+    <Card style={styles.levelCard}>
+      <View style={styles.levelHeader}>
+        <View style={styles.levelBadge}>
+          <Text style={styles.levelBadgeText}>⭐</Text>
         </View>
-        <View style={styles.materiInfo}>
-          <Text style={styles.materiTitle}>{item.title}</Text>
-          <Text style={styles.materiKD}>{item.kd}</Text>
-          <Text style={styles.materiPreview} numberOfLines={2}>
-            {item.konsep}
-          </Text>
+        <View style={styles.levelInfo}>
+          <Text style={styles.levelNama}>{item.nama}</Text>
+          <View style={styles.levelStats}>
+            <View style={styles.statChip}>
+              <Text style={styles.statChipText}>⏱️ {item.durasiMenit} menit</Text>
+            </View>
+            <View style={[styles.statChip, styles.statChipGreen]}>
+              <Text style={styles.statChipText}>🏆 {item.poinPerSoal} poin/soal</Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      <View style={styles.materiActions}>
+      <View style={styles.levelActions}>
         <TouchableOpacity
           style={[styles.actionButton, styles.editButton]}
           onPress={() => handleEdit(item)}
@@ -100,29 +104,29 @@ export const KelolaMateriScreen: React.FC<KelolaMateriScreenProps> = ({ navigati
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Kelola Materi</Text>
-        <Text style={styles.headerSubtitle}>Tambah, edit, atau hapus materi pembelajaran</Text>
+        <Text style={styles.headerTitle}>Kelola Level</Text>
+        <Text style={styles.headerSubtitle}>Atur level kuis, poin, dan durasi waktu</Text>
       </View>
 
       <View style={styles.content}>
         <View style={styles.toolbar}>
-          <Text style={styles.countText}>{materiList.length} Materi</Text>
+          <Text style={styles.countText}>{levelList.length} Level terdaftar</Text>
         </View>
 
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={Colors.earthBrown} />
           </View>
-        ) : materiList.length === 0 ? (
+        ) : levelList.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📚</Text>
-            <Text style={styles.emptyText}>Belum ada materi</Text>
-            <Text style={styles.emptySubtext}>Tap tombol + untuk menambah materi baru</Text>
+            <Text style={styles.emptyIcon}>⭐</Text>
+            <Text style={styles.emptyText}>Belum ada level</Text>
+            <Text style={styles.emptySubtext}>Tap tombol + untuk menambah level kuis</Text>
           </View>
         ) : (
           <FlatList
-            data={materiList}
-            renderItem={renderMateriItem}
+            data={levelList}
+            renderItem={renderLevelItem}
             keyExtractor={(item) => item.id}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.listContent}
@@ -176,48 +180,55 @@ const styles = StyleSheet.create({
   listContent: {
     padding: 20,
   },
-  materiCard: {
+  levelCard: {
     marginBottom: 16,
   },
-  materiHeader: {
+  levelHeader: {
     flexDirection: 'row',
     marginBottom: 16,
+    alignItems: 'center',
   },
-  orderBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: Colors.deepTeal,
+  levelBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.mustard + '40',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  orderText: {
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.bold,
-    color: Colors.white,
+  levelBadgeText: {
+    fontSize: 24,
   },
-  materiInfo: {
+  levelInfo: {
     flex: 1,
   },
-  materiTitle: {
+  levelNama: {
     fontSize: Typography.sizes.body,
-    fontWeight: Typography.weights.semibold,
+    fontWeight: Typography.weights.bold,
     color: Colors.earthBrown,
-    marginBottom: 4,
+    marginBottom: 8,
   },
-  materiKD: {
+  levelStats: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  statChip: {
+    backgroundColor: Colors.softBlue + '25',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statChipGreen: {
+    backgroundColor: Colors.successGreen + '25',
+  },
+  statChipText: {
     fontSize: Typography.sizes.caption,
-    fontWeight: Typography.weights.medium,
-    color: Colors.softBlue,
-    marginBottom: 6,
-  },
-  materiPreview: {
-    fontSize: Typography.sizes.subheading,
     color: Colors.charcoalText,
-    lineHeight: 18,
+    fontWeight: Typography.weights.medium,
   },
-  materiActions: {
+  levelActions: {
     flexDirection: 'row',
     gap: 8,
   },
@@ -238,6 +249,11 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.subheading,
     fontWeight: Typography.weights.medium,
     color: Colors.earthBrown,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   emptyState: {
     flex: 1,
@@ -261,11 +277,6 @@ const styles = StyleSheet.create({
     opacity: 0.6,
     textAlign: 'center',
     paddingHorizontal: 40,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   fab: {
     position: 'absolute',

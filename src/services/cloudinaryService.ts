@@ -14,9 +14,9 @@
 // Note: Untuk production, sebaiknya gunakan signed upload dari backend
 // Unsigned upload hanya untuk development/testing
 
-// Cloudinary config - For production, use secure config management
-const CLOUDINARY_CLOUD_NAME = 'de8wyupno';
-const CLOUDINARY_UPLOAD_PRESET = 'Geo App';
+// Cloudinary config - Using Expo's built-in environment variables prefixed with EXPO_PUBLIC_
+const CLOUDINARY_CLOUD_NAME = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME || 'de8wyupno';
+const CLOUDINARY_UPLOAD_PRESET = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'Geo App';
 
 interface CloudinaryResponse {
   secure_url: string;

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
@@ -14,9 +15,11 @@ export const KelolaPenggunaScreen: React.FC<KelolaPenggunaScreenProps> = ({ navi
   const [userList, setUserList] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadUsers();
+    }, [])
+  );
 
   const loadUsers = async () => {
     try {

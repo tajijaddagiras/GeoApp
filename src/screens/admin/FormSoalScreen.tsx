@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { createSoal, updateSoal } from '../../services/firebaseService';
+import { createSoal, updateSoal, getAllLevels } from '../../services/firebaseService';
+import { selectImage } from '../../utils/imagePickerUtils';
+import { uploadImageToCloudinary } from '../../services/cloudinaryService';
+import { Level } from '../../types';
 
 interface FormSoalScreenProps {
   route: any;
@@ -22,9 +25,49 @@ export const FormSoalScreen: React.FC<FormSoalScreenProps> = ({ route, navigatio
     jawabanC: soal?.jawabanC || '',
     jawabanD: soal?.jawabanD || '',
     jawabanBenar: soal?.jawabanBenar || 'A',
+    imageUrl: soal?.imageUrl || '',
+    levelId: soal?.levelId || '',
     order: soal?.order?.toString() || '1',
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [levelList, setLevelList] = useState<Level[]>([]);
+  const [loadingLevels, setLoadingLevels] = useState(true);
+  const [showLevelPicker, setShowLevelPicker] = useState(false);
+
+  useEffect(() => {
+    loadLevels();
+  }, []);
+
+  const loadLevels = async () => {
+    try {
+      setLoadingLevels(true);
+      const data = await getAllLevels();
+      setLevelList(data);
+    } catch (error) {
+      console.error('Load levels error:', error);
+    } finally {
+      setLoadingLevels(false);
+    }
+  };
+
+  const handleSelectImage = async () => {
+    try {
+      const image = await selectImage();
+      if (image) {
+        setUploadingImage(true);
+        const url = await uploadImageToCloudinary(image.uri, {
+          folder: 'geo-contextual-app/soal',
+        });
+        updateField('imageUrl', url);
+      }
+    } catch (error) {
+      console.error('Error selecting/uploading image:', error);
+      Alert.alert('Error', 'Gagal mengupload gambar');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const updateField = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -70,6 +113,8 @@ export const FormSoalScreen: React.FC<FormSoalScreenProps> = ({ route, navigatio
         jawabanC: formData.jawabanC.trim(),
         jawabanD: formData.jawabanD.trim(),
         jawabanBenar: formData.jawabanBenar,
+        imageUrl: formData.imageUrl || undefined,
+        levelId: formData.levelId || undefined,
         order: Number(formData.order),
       };
 
@@ -108,6 +153,65 @@ export const FormSoalScreen: React.FC<FormSoalScreenProps> = ({ route, navigatio
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card>
+          <Text style={styles.label}>Pilih Level Kuis *</Text>
+          <Text style={styles.hint}>Level menentukan durasi dan poin per soal</Text>
+          {loadingLevels ? (
+            <ActivityIndicator color={Colors.deepTeal} style={{ marginVertical: 10 }} />
+          ) : levelList.length === 0 ? (
+            <Text style={styles.errorText}>Belum ada level. Silakan tambahkan level terlebih dahulu di menu Kelola Level.</Text>
+          ) : (
+            <View>
+              <TouchableOpacity
+                style={styles.input}
+                onPress={() => setShowLevelPicker(!showLevelPicker)}
+              >
+                <Text style={{ color: formData.levelId ? Colors.charcoalText : Colors.gray }}>
+                  {formData.levelId 
+                    ? levelList.find(l => l.id === formData.levelId)?.nama || 'Pilih level...'
+                    : 'Pilih level...'
+                  }
+                </Text>
+              </TouchableOpacity>
+              
+              {showLevelPicker && (
+                <View style={styles.dropdownContainer}>
+                  {levelList.map(level => (
+                    <TouchableOpacity
+                      key={level.id}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        updateField('levelId', level.id);
+                        setShowLevelPicker(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{level.nama}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+          
+          {/* Level Info Preview */}
+          {formData.levelId && levelList.find(l => l.id === formData.levelId) && (
+            <View style={styles.levelInfoContainer}>
+              <View style={styles.levelInfoItem}>
+                <Text style={styles.levelInfoLabel}>Durasi</Text>
+                <Text style={styles.levelInfoValue}>
+                  ⏱️ {levelList.find(l => l.id === formData.levelId)?.durasiMenit} menit
+                </Text>
+              </View>
+              <View style={styles.levelInfoItem}>
+                <Text style={styles.levelInfoLabel}>Poin per soal</Text>
+                <Text style={styles.levelInfoValue}>
+                  🏆 {levelList.find(l => l.id === formData.levelId)?.poinPerSoal} poin
+                </Text>
+              </View>
+            </View>
+          )}
+        </Card>
+
+        <Card>
           <Text style={styles.label}>Nomor Urut Soal *</Text>
           <Text style={styles.hint}>Urutan soal dalam kuis</Text>
           <TextInput
@@ -132,6 +236,40 @@ export const FormSoalScreen: React.FC<FormSoalScreenProps> = ({ route, navigatio
             numberOfLines={4}
             textAlignVertical="top"
           />
+        </Card>
+
+        <Card>
+          <Text style={styles.label}>Gambar Soal (Opsional)</Text>
+          <Text style={styles.hint}>Pilih gambar dari galeri atau kamera jika soal membutuhkan gambar</Text>
+          
+          <View style={styles.imageUploadContainer}>
+            {formData.imageUrl ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: formData.imageUrl }} style={styles.imagePreview} />
+                <TouchableOpacity 
+                  style={styles.removeImageButton}
+                  onPress={() => updateField('imageUrl', '')}
+                >
+                  <Text style={styles.removeImageText}>Hapus</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.uploadButton}
+                onPress={handleSelectImage}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator color={Colors.deepTeal} />
+                ) : (
+                  <>
+                    <Text style={styles.uploadIcon}>📷</Text>
+                    <Text style={styles.uploadText}>Pilih Gambar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </Card>
 
         <Card>
@@ -293,6 +431,50 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     minHeight: 100,
   },
+  errorText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.alertRed,
+    marginBottom: 8,
+  },
+  dropdownContainer: {
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderRadius: 8,
+    backgroundColor: Colors.white,
+    maxHeight: 150,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderSubtle,
+  },
+  dropdownItemText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.charcoalText,
+  },
+  levelInfoContainer: {
+    flexDirection: 'row',
+    marginTop: 16,
+    backgroundColor: Colors.deepTeal + '10',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.deepTeal + '20',
+  },
+  levelInfoItem: {
+    flex: 1,
+  },
+  levelInfoLabel: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.gray,
+    marginBottom: 4,
+  },
+  levelInfoValue: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.bold,
+    color: Colors.deepTeal,
+  },
   sectionTitle: {
     fontSize: Typography.sizes.body,
     fontWeight: Typography.weights.semibold,
@@ -339,5 +521,51 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     marginBottom: 40,
+  },
+  imageUploadContainer: {
+    marginTop: 8,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  removeImageText: {
+    color: Colors.white,
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.bold,
+  },
+  uploadButton: {
+    borderWidth: 2,
+    borderColor: Colors.borderSubtle,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  uploadIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  uploadText: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.medium,
+    color: Colors.deepTeal,
   },
 });

@@ -20,7 +20,7 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { db, auth } from '../config/firebase';
-import { Materi, Soal, User, Progress, Jurnal } from '../types';
+import { Materi, Soal, User, Progress, Jurnal, Level } from '../types';
 
 // ==================== AUTHENTICATION ====================
 
@@ -180,6 +180,66 @@ export const deleteMateri = async (id: string): Promise<void> => {
     await deleteDoc(doc(db, 'materi', id));
   } catch (error) {
     console.error('Delete materi error:', error);
+    throw error;
+  }
+};
+
+// ==================== LEVEL CRUD ====================
+
+export const getAllLevels = async (): Promise<Level[]> => {
+  try {
+    const q = query(collection(db, 'level'), orderBy('createdAt', 'asc'));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Level[];
+  } catch (error) {
+    console.error('Get all levels error:', error);
+    throw error;
+  }
+};
+
+export const getLevelById = async (id: string): Promise<Level | null> => {
+  try {
+    const docRef = doc(db, 'level', id);
+    const docSnap = await getDoc(docRef);
+    if (!docSnap.exists()) return null;
+    return { id: docSnap.id, ...docSnap.data() } as Level;
+  } catch (error) {
+    console.error('Get level by id error:', error);
+    throw error;
+  }
+};
+
+export const createLevel = async (level: Omit<Level, 'id'>): Promise<string> => {
+  try {
+    const docRef = await addDoc(collection(db, 'level'), {
+      ...level,
+      createdAt: Timestamp.now(),
+    });
+    return docRef.id;
+  } catch (error) {
+    console.error('Create level error:', error);
+    throw error;
+  }
+};
+
+export const updateLevel = async (id: string, level: Partial<Level>): Promise<void> => {
+  try {
+    const docRef = doc(db, 'level', id);
+    await updateDoc(docRef, level);
+  } catch (error) {
+    console.error('Update level error:', error);
+    throw error;
+  }
+};
+
+export const deleteLevel = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'level', id));
+  } catch (error) {
+    console.error('Delete level error:', error);
     throw error;
   }
 };

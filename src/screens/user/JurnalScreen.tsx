@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
@@ -47,9 +48,11 @@ export const JurnalScreen: React.FC<JurnalScreenProps> = ({ navigation }) => {
 
   const years = [2024, 2025, 2026];
 
-  useEffect(() => {
-    loadJurnal();
-  }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      loadJurnal();
+    }, [user])
+  );
 
   const loadJurnal = async () => {
     if (!user) return;

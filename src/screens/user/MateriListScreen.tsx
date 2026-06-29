@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
@@ -14,9 +15,11 @@ export const MateriListScreen: React.FC<MateriListScreenProps> = ({ navigation }
   const [materiList, setMateriList] = useState<Materi[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadMateri();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadMateri();
+    }, [])
+  );
 
   const loadMateri = async () => {
     try {

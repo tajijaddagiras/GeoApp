@@ -9,6 +9,8 @@ import { FormMateriScreen } from '../screens/admin/FormMateriScreen';
 import { KelolaPenggunaScreen } from '../screens/admin/KelolaPenggunaScreen';
 import { KelolaSoalScreen } from '../screens/admin/KelolaSoalScreen';
 import { FormSoalScreen } from '../screens/admin/FormSoalScreen';
+import { KelolaLevelScreen } from '../screens/admin/KelolaLevelScreen';
+import { FormLevelScreen } from '../screens/admin/FormLevelScreen';
 import { AdminAkunScreen } from '../screens/admin/AdminAkunScreen';
 
 // Tab icon component
@@ -66,6 +68,14 @@ const AdminTabs = () => {
         }}
       />
       <Tab.Screen
+        name="KelolaLevel"
+        component={KelolaLevelScreen}
+        options={{
+          tabBarLabel: 'Level',
+          tabBarIcon: ({ size }) => <TabIcon emoji="⭐" size={size} />,
+        }}
+      />
+      <Tab.Screen
         name="KelolaPengguna"
         component={KelolaPenggunaScreen}
         options={{
@@ -91,6 +101,7 @@ export const AdminStack = () => {
       <Stack.Screen name="AdminTabs" component={AdminTabs} />
       <Stack.Screen name="FormMateri" component={FormMateriScreen} />
       <Stack.Screen name="FormSoal" component={FormSoalScreen} />
+      <Stack.Screen name="FormLevel" component={FormLevelScreen} />
     </Stack.Navigator>
   );
 };

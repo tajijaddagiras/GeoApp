@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
-import { getSoalByMateriId, updateProgress } from '../../services/firebaseService';
+import { getSoalByMateriId, updateProgress, getAllLevels } from '../../services/firebaseService';
 import { useAuthStore } from '../../store/authStore';
-import { Soal } from '../../types';
+import { Soal, Level } from '../../types';
 
 interface KuisScreenProps {
   route: any;
@@ -16,13 +16,18 @@ interface KuisScreenProps {
 export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => {
   const { materiId } = route.params;
   const { user } = useAuthStore();
-  const [soalList, setSoalList] = useState<Soal[]>([]);
+  const [soalList, setSoalList] = useState<Soal[]>([]); // Soal for selected level
+  const [allSoal, setAllSoal] = useState<Soal[]>([]); // All soal for this materi
+  const [availableLevels, setAvailableLevels] = useState<Level[]>([]);
+  const [quizStarted, setQuizStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<{ [key: number]: string }>({});
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(1800); // 30 minutes in seconds
+  const [quizLevel, setQuizLevel] = useState<Level | null>(null);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [maxScore, setMaxScore] = useState(100);
 
   useEffect(() => {
     loadSoal();
@@ -54,13 +59,47 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
         ]);
         return;
       }
-      setSoalList(data);
+      setAllSoal(data);
+
+      // Extract unique level IDs from the questions
+      const uniqueLevelIds = Array.from(new Set(data.filter(s => s.levelId).map(s => s.levelId)));
+      
+      if (uniqueLevelIds.length > 0) {
+        // Fetch all levels to get names and details
+        const allLevelsData = await getAllLevels();
+        const available = allLevelsData.filter(level => uniqueLevelIds.includes(level.id));
+        setAvailableLevels(available);
+      } else {
+        // Fallback for old questions without level: directly start quiz
+        setQuizStarted(true);
+        setSoalList(data);
+        setTimeLeft(1800);
+        setMaxScore(100);
+      }
+      
     } catch (error) {
       console.error('Load soal error:', error);
       Alert.alert('Error', 'Gagal memuat soal');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleStartQuiz = (level: Level) => {
+    setQuizLevel(level);
+    
+    // Filter questions by selected level
+    const filteredSoal = allSoal.filter(s => s.levelId === level.id);
+    
+    if (filteredSoal.length === 0) {
+      Alert.alert('Error', 'Tidak ada soal untuk level ini');
+      return;
+    }
+
+    setSoalList(filteredSoal);
+    setTimeLeft(level.durasiMenit * 60);
+    setMaxScore(level.poinPerSoal * filteredSoal.length);
+    setQuizStarted(true);
   };
 
   const formatTime = (seconds: number): string => {
@@ -97,7 +136,8 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
       }
     });
 
-    const finalScore = Math.round((correctCount / soalList.length) * 100);
+    const poinPerSoal = quizLevel ? quizLevel.poinPerSoal : (maxScore === 100 ? (100 / soalList.length) : 10);
+    const finalScore = Math.round(correctCount * poinPerSoal);
     setScore(finalScore);
     setShowResult(true);
 
@@ -126,6 +166,52 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
     );
   }
 
+  if (!quizStarted) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+              <Text style={styles.backIcon}>←</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Pilih Level</Text>
+            <View style={styles.placeholder} />
+          </View>
+        </View>
+        <ScrollView style={styles.content} contentContainerStyle={styles.levelSelectionContainer}>
+          <Text style={styles.levelSelectionTitle}>Pilih Tingkat Kesulitan</Text>
+          <Text style={styles.levelSelectionSubtitle}>
+            Terdapat {availableLevels.length} level yang tersedia untuk materi ini
+          </Text>
+          
+          {availableLevels.map((level) => {
+            const soalCount = allSoal.filter(s => s.levelId === level.id).length;
+            return (
+              <TouchableOpacity
+                key={level.id}
+                style={styles.levelCard}
+                onPress={() => handleStartQuiz(level)}
+              >
+                <View style={styles.levelBadge}>
+                  <Text style={styles.levelBadgeText}>⭐</Text>
+                </View>
+                <View style={styles.levelInfo}>
+                  <Text style={styles.levelNama}>{level.nama}</Text>
+                  <View style={styles.levelStats}>
+                    <Text style={styles.levelStatText}>📝 {soalCount} Soal</Text>
+                    <Text style={styles.levelStatText}>⏱️ {level.durasiMenit} Menit</Text>
+                    <Text style={styles.levelStatText}>🏆 {level.poinPerSoal} Poin/soal</Text>
+                  </View>
+                </View>
+                <Text style={styles.startArrow}>➔</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    );
+  }
+
   if (showResult) {
     return (
       <View style={styles.container}>
@@ -135,11 +221,11 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
         <ScrollView style={styles.content} contentContainerStyle={styles.resultContainer}>
           <View style={styles.scoreCircle}>
             <Text style={styles.scoreValue}>{score}</Text>
-            <Text style={styles.scoreLabel}>dari 100</Text>
+            <Text style={styles.scoreLabel}>dari {maxScore}</Text>
           </View>
 
           <Text style={styles.resultTitle}>
-            {score >= 80 ? '🎉 Luar Biasa!' : score >= 60 ? '👍 Bagus!' : '💪 Terus Belajar!'}
+            {(score / maxScore) >= 0.8 ? '🎉 Luar Biasa!' : (score / maxScore) >= 0.6 ? '👍 Bagus!' : '💪 Terus Belajar!'}
           </Text>
           <Text style={styles.resultSubtitle}>
             Kamu menjawab {answeredCount} dari {soalList.length} soal
@@ -149,13 +235,13 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Jawaban Benar</Text>
               <Text style={[styles.summaryValue, { color: Colors.successGreen }]}>
-                {Math.round((score / 100) * soalList.length)}
+                {Math.round(score / (quizLevel ? quizLevel.poinPerSoal : (maxScore === 100 ? (100 / soalList.length) : 10)))}
               </Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Jawaban Salah</Text>
               <Text style={[styles.summaryValue, { color: Colors.alertRed }]}>
-                {soalList.length - Math.round((score / 100) * soalList.length)}
+                {soalList.length - Math.round(score / (quizLevel ? quizLevel.poinPerSoal : (maxScore === 100 ? (100 / soalList.length) : 10)))}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -166,12 +252,12 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
 
           <Button
             title="Kembali ke Dashboard"
-            onPress={() => navigation.navigate('Dashboard')}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Dashboard' })}
             style={styles.actionButton}
           />
           <Button
             title="Tulis Jurnal Refleksi"
-            onPress={() => navigation.navigate('Jurnal')}
+            onPress={() => navigation.navigate('MainTabs', { screen: 'Jurnal' })}
             variant="secondary"
           />
         </ScrollView>
@@ -202,6 +288,12 @@ export const KuisScreen: React.FC<KuisScreenProps> = ({ route, navigation }) => 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Card>
           <Text style={styles.questionNumber}>Soal {currentIndex + 1}</Text>
+          {currentSoal.imageUrl ? (
+            <Image 
+              source={{ uri: currentSoal.imageUrl }} 
+              style={styles.soalImage} 
+            />
+          ) : null}
           <Text style={styles.questionText}>{currentSoal.pertanyaan}</Text>
 
           <View style={styles.optionsContainer}>
@@ -279,7 +371,76 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: Colors.creamWhite,
+  },
+  levelSelectionContainer: {
+    padding: 20,
+  },
+  levelSelectionTitle: {
+    fontSize: Typography.sizes.heading,
+    fontWeight: Typography.weights.bold,
+    color: Colors.earthBrown,
+    marginBottom: 8,
+  },
+  levelSelectionSubtitle: {
+    fontSize: Typography.sizes.body,
+    color: Colors.charcoalText,
+    opacity: 0.8,
+    marginBottom: 24,
+  },
+  levelCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 16,
+    elevation: 2,
+    shadowColor: Colors.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+  },
+  levelBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.mustard + '30',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  levelBadgeText: {
+    fontSize: 24,
+  },
+  levelInfo: {
+    flex: 1,
+  },
+  levelNama: {
+    fontSize: Typography.sizes.body,
+    fontWeight: Typography.weights.bold,
+    color: Colors.earthBrown,
+    marginBottom: 6,
+  },
+  levelStats: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  levelStatText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.deepTeal,
+    backgroundColor: Colors.deepTeal + '15',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    fontWeight: Typography.weights.medium,
+  },
+  startArrow: {
+    fontSize: 20,
+    color: Colors.deepTeal,
+    marginLeft: 8,
   },
   header: {
     paddingHorizontal: 20,
@@ -294,6 +455,9 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   backButton: {
+    width: 40,
+  },
+  placeholder: {
     width: 40,
   },
   backIcon: {
@@ -344,6 +508,13 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     color: Colors.deepTeal,
     marginBottom: 8,
+  },
+  soalImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'cover',
+    marginBottom: 16,
   },
   questionText: {
     fontSize: Typography.sizes.body,

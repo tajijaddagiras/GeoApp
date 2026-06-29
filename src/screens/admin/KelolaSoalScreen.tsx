@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Image } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Card } from '../../components/Card';
@@ -17,9 +18,11 @@ export const KelolaSoalScreen: React.FC<KelolaSoalScreenProps> = ({ navigation }
   const [loading, setLoading] = useState(true);
   const [loadingSoal, setLoadingSoal] = useState(false);
 
-  useEffect(() => {
-    loadMateri();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadMateri();
+    }, [])
+  );
 
   const loadMateri = async () => {
     try {
@@ -27,8 +30,16 @@ export const KelolaSoalScreen: React.FC<KelolaSoalScreenProps> = ({ navigation }
       const data = await getAllMateri();
       setMateriList(data);
       if (data.length > 0) {
-        setSelectedMateri(data[0].id);
-        loadSoal(data[0].id);
+        setSelectedMateri(prev => {
+          const stillExists = prev && data.some(m => m.id === prev);
+          const newSelected = stillExists ? prev : data[0].id;
+          // Load soal for the selected materi
+          loadSoal(newSelected);
+          return newSelected;
+        });
+      } else {
+        setSelectedMateri(null);
+        setSoalList([]);
       }
     } catch (error) {
       console.error('Load materi error:', error);
@@ -103,7 +114,14 @@ export const KelolaSoalScreen: React.FC<KelolaSoalScreenProps> = ({ navigation }
           <Text style={styles.soalText} numberOfLines={2}>
             {item.pertanyaan}
           </Text>
-          <Text style={styles.answerKey}>Jawaban: {item.jawabanBenar}</Text>
+          <View style={styles.soalMeta}>
+            <Text style={styles.answerKey}>Jawaban: {item.jawabanBenar}</Text>
+            {item.imageUrl ? (
+              <View style={styles.imageBadge}>
+                <Text style={styles.imageBadgeText}>📷 Ada Gambar</Text>
+              </View>
+            ) : null}
+          </View>
         </View>
       </View>
 
@@ -326,6 +344,24 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.caption,
     fontWeight: Typography.weights.semibold,
     color: Colors.successGreen,
+  },
+  soalMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 2,
+    flexWrap: 'wrap',
+  },
+  imageBadge: {
+    backgroundColor: Colors.softBlue + '30',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  imageBadgeText: {
+    fontSize: Typography.sizes.caption,
+    color: Colors.deepTeal,
+    fontWeight: Typography.weights.medium,
   },
   soalActions: {
     flexDirection: 'row',
