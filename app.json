@@ -1,0 +1,47 @@
+{
+  "expo": {
+    "name": "Geo-Contextual App",
+    "slug": "geo-contextual-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#6AA88F"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.man1pekanbaru.geocontextual"
+    },
+    "android": {
+      "package": "com.man1pekanbaru.geocontextual",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#6AA88F"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_MEDIA_IMAGES"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aplikasi memerlukan akses ke galeri untuk memilih foto.",
+          "cameraPermission": "Aplikasi memerlukan akses ke kamera untuk mengambil foto."
+        }
+      ]
+    ]
+  }
+}
