@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform, Image, ActivityIndicator } from 'react-native';
 import { Colors } from '../../constants/colors';
 import { Typography } from '../../constants/typography';
 import { Button } from '../../components/Button';
 import { Card } from '../../components/Card';
 import { createMateri, updateMateri } from '../../services/firebaseService';
+import { selectImage } from '../../utils/imagePickerUtils';
+import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 
 interface FormMateriScreenProps {
   route: any;
@@ -24,6 +26,25 @@ export const FormMateriScreen: React.FC<FormMateriScreenProps> = ({ route, navig
     imageUrl: materi?.imageUrl || '',
   });
   const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleSelectImage = async () => {
+    try {
+      const image = await selectImage();
+      if (image) {
+        setUploadingImage(true);
+        const url = await uploadImageToCloudinary(image.uri, {
+          folder: 'geo-contextual-app/materi',
+        });
+        updateField('imageUrl', url);
+      }
+    } catch (error) {
+      console.error('Error selecting/uploading image:', error);
+      Alert.alert('Error', 'Gagal mengupload gambar');
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const updateField = (field: string, value: string) => {
     setFormData({ ...formData, [field]: value });
@@ -169,16 +190,37 @@ export const FormMateriScreen: React.FC<FormMateriScreenProps> = ({ route, navig
         </Card>
 
         <Card>
-          <Text style={styles.label}>URL Gambar (Opsional)</Text>
-          <Text style={styles.hint}>Link URL gambar ilustrasi</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="https://example.com/image.jpg"
-            placeholderTextColor={Colors.gray}
-            value={formData.imageUrl}
-            onChangeText={(text) => updateField('imageUrl', text)}
-            autoCapitalize="none"
-          />
+          <Text style={styles.label}>Gambar Ilustrasi (Opsional)</Text>
+          <Text style={styles.hint}>Pilih gambar dari galeri atau kamera</Text>
+          
+          <View style={styles.imageUploadContainer}>
+            {formData.imageUrl ? (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: formData.imageUrl }} style={styles.imagePreview} />
+                <TouchableOpacity 
+                  style={styles.removeImageButton}
+                  onPress={() => updateField('imageUrl', '')}
+                >
+                  <Text style={styles.removeImageText}>Hapus</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                style={styles.uploadButton}
+                onPress={handleSelectImage}
+                disabled={uploadingImage}
+              >
+                {uploadingImage ? (
+                  <ActivityIndicator color={Colors.deepTeal} />
+                ) : (
+                  <>
+                    <Text style={styles.uploadIcon}>📷</Text>
+                    <Text style={styles.uploadText}>Pilih Gambar</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </Card>
 
         <Button
@@ -265,6 +307,52 @@ const styles = StyleSheet.create({
     color: Colors.charcoalText,
     backgroundColor: Colors.white,
     minHeight: 120,
+  },
+  imageUploadContainer: {
+    marginTop: 8,
+  },
+  uploadButton: {
+    borderWidth: 1,
+    borderColor: Colors.borderSubtle,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+    padding: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  uploadIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  uploadText: {
+    fontSize: Typography.sizes.body,
+    color: Colors.deepTeal,
+    fontWeight: Typography.weights.medium,
+  },
+  imagePreviewContainer: {
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
+    resizeMode: 'cover',
+  },
+  removeImageButton: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  removeImageText: {
+    color: Colors.white,
+    fontSize: Typography.sizes.caption,
+    fontWeight: Typography.weights.bold,
   },
   saveButton: {
     marginTop: 24,
